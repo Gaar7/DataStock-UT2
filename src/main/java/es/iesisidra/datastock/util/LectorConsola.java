@@ -53,6 +53,55 @@ public final class LectorConsola {
         }
     }
 
+    public static int leerEnteroPositivo(String mensaje) {
+        int valor = -1;
+        
+        // Bucle do-while: se ejecuta al menos una vez y se repite hasta que el valor sea válido.
+        // Por qué se usa: garantiza que el programa no avance hasta obtener un dato correcto.
+        do {
+            System.out.print(mensaje);
+            try {
+                // Lee la línea completa y la convierte a entero para evitar problemas con el buffer de Scanner
+                String entrada = TECLADO.nextLine();
+                valor = Integer.parseInt(entrada.trim());
+                
+                if (valor <= 0) {
+                    System.err.println("[ERROR] El valor debe ser un número entero positivo mayor que cero.");
+                }
+            } catch (NumberFormatException e) {
+                // Captura el error si el usuario introduce letras o símbolos no numéricos
+                System.err.println("[ERROR] Formato incorrecto. Debe introducir un número entero válido.");
+            }
+        } while (valor <= 0);
+        
+        return valor;
+    }
+
+    /**
+     * Lee una cadena de texto por consola asegurándose de que no esté vacía
+     * ni compuesta únicamente por espacios en blanco.
+     * 
+     * @param mensaje Mensaje informativo que se muestra al usuario.
+     * @return La cadena de texto validada.
+     */
+    public static String leerCadenaNoVacia(String mensaje) {
+        String texto = "";
+        
+        // Bucle do-while para obligar al usuario a introducir contenido real
+        do {
+            System.out.print(mensaje);
+            if (TECLADO.hasNextLine()) {
+                texto = TECLADO.nextLine().trim();
+            }
+            
+            if (texto.isEmpty()) {
+                System.err.println("[ERROR] El campo no puede estar vacío.");
+            }
+        } while (texto.isEmpty());
+        
+        return texto;
+    }
+
     /** Detiene el menú hasta que el usuario pulse Intro. */
     public static void pausar() { leerTexto("Pulsa Intro para continuar..."); }
 }
