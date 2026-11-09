@@ -1,5 +1,6 @@
 package es.iesisidra.datastock;
 
+import es.iesisidra.datastock.complementarias.SQLiteComparacionActividad;
 import es.iesisidra.datastock.servicio.Inventario;
 import es.iesisidra.datastock.ui.MenuPrincipal;
 
@@ -19,6 +20,7 @@ public final class App {
      */
     public static void main(String[] args) {
         Inventario inventario = new Inventario();
+        SQLiteComparacionActividad.ejecutarComparacion();
         MenuPrincipal menu = new MenuPrincipal(inventario);
         menu.iniciar();
     }
