@@ -11,8 +11,15 @@ import es.iesisidra.datastock.servicio.ImportadorJsonService;
 import es.iesisidra.datastock.servicio.ImportadorXmlService;
 import es.iesisidra.datastock.servicio.Inventario;
 import es.iesisidra.datastock.servicio.SerializacionService;
+import es.iesisidra.datastock.servicio.ServicioCategoria;
+import es.iesisidra.datastock.servicio.ServicioConexionBD;
+import es.iesisidra.datastock.servicio.ServicioConsultaProducto;
+import es.iesisidra.datastock.servicio.ServicioMovimientoStock;
+import es.iesisidra.datastock.servicio.ServicioProducto;
+import es.iesisidra.datastock.servicio.ServicioProveedor;
 import es.iesisidra.datastock.util.ColoresConsola;
 import es.iesisidra.datastock.util.LectorConsola;
+
 
 /**
  * Presentación de menús y navegación de la primera fase de DataStock.
@@ -41,6 +48,8 @@ public class MenuPrincipal {
     private final ConsultaInventarioService consultaService;
     private final ExportadorInventarioService exportadorService;
     private final SerializacionService serializacionService;
+
+
 
     // Este es el constructor obligatorio que App.java está buscando
     public MenuPrincipal(Inventario inventario) {
@@ -86,25 +95,28 @@ public class MenuPrincipal {
             System.out.println("4. Consultar productos");
             System.out.println("5. Exportar productos");
             System.out.println("6. Guardar y recuperar inventario");
+            System.out.println("7. Comprobar conexión y mostrar info de la BD");
+            System.out.println("8. Gestión de Categorías");
+            System.out.println("9. Gestión de Proveedores");
+            System.out.println("10. Mantenimiento de Productos (CRUD)");
+            System.out.println("11. Consultas y Búsquedas Avanzadas en BD");
+            System.out.println("12. Registrar Movimiento de Stock");
             System.out.println("0. Salir");
             // LectorConsola valida que la opción esté dentro del rango permitido.
-            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 6);
+            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 12);
             switch (opcion) {
                 case 1:
-                    System.out.println("Introduce la ruta a explorar: ");
-                    String ruta = LectorConsola.leerTexto("Introduce la ruta");
+                    String ruta = LectorConsola.leerTexto("Introduce la ruta a explorar: ");
                     ExploradorFicheros.explorarRuta(ruta);
                     LectorConsola.pausar();
                     break;
                 case 2:
-                    System.out.println("Introduce la ruta del JSON: ");
-                    String rutaJson = LectorConsola.leerTexto("Introduce la ruta");
+                    String rutaJson = LectorConsola.leerTexto("Introduce la ruta del JSON: ");
                     importadorJson.importarDesdeJson(rutaJson);
                     LectorConsola.pausar();
                     break;
                 case 3:
-                    System.out.println("Introduce la ruta del XML: ");
-                    String rutaXml = LectorConsola.leerTexto("Introduce la ruta: ");
+                    String rutaXml = LectorConsola.leerTexto("Introduce la ruta del XML: ");
                     importadorXml.importarDesdeXml(rutaXml);
                     LectorConsola.pausar();
                     break;
@@ -117,12 +129,32 @@ public class MenuPrincipal {
                 case 6:
                     menuSerializacion();
                     break;
+                // --- NUEVAS OPCIONES UT2 ---
+                case 7:
+                    ServicioConexionBD.comprobarConexionInformacion();
+                    LectorConsola.pausar();
+                    break;
+                case 8:
+                    menuCategorias();
+                    break;
+                case 9:
+                    menuProveedores();
+                    break;
+                case 10:
+                    menuProductos();
+                    break;
+                case 11:
+                    menuConsultasBd();
+                    break;
+                case 12:
+                    ServicioMovimientoStock.registrarMovimientoStock();
+                    LectorConsola.pausar();
+                    break;
                 case 0:
                     System.out.println(ColoresConsola.pintar("Hasta pronto.", ColoresConsola.VERDE));
                     break;
                 default:
                     throw new IllegalStateException("Opción inesperada");
-
             }
         } while (opcion != 0);
     }
@@ -447,5 +479,104 @@ public class MenuPrincipal {
         System.out.println(ColoresConsola.pintar("[PENDIENTE] " + requisito, ColoresConsola.AMARILLO));
         System.out.println("Esta funcionalidad debe desarrollarla el alumnado.");
         LectorConsola.pausar();
+    }
+    private void menuCategorias() {
+        int opcion;
+        do {
+            System.out.println("\n---------- GESTIÓN DE CATEGORÍAS ----------");
+            System.out.println("1. Dar de alta categoría");
+            System.out.println("2. Listar categorías");
+            System.out.println("3. Modificar categoría");
+            System.out.println("4. Eliminar categoría");
+            System.out.println("0. Volver al menú principal");
+
+            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+
+            switch (opcion) {
+                case 1 -> ServicioCategoria.darDeAltaCategoria();
+                case 2 -> ServicioCategoria.listarCategorias();
+                case 3 -> ServicioCategoria.modificarCategoria();
+                case 4 -> ServicioCategoria.eliminarCategoria();
+                case 0 -> System.out.println("Volviendo al menú principal...");
+            }
+            if (opcion != 0) {
+                LectorConsola.pausar();
+            }
+        } while (opcion != 0);
+    }
+
+    private void menuProveedores() {
+        int opcion;
+        do {
+            System.out.println("\n---------- GESTIÓN DE PROVEEDORES ----------");
+            System.out.println("1. Dar de alta proveedor");
+            System.out.println("2. Listar proveedores");
+            System.out.println("3. Modificar proveedor");
+            System.out.println("4. Eliminar proveedor");
+            System.out.println("0. Volver al menú principal");
+
+            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+
+            switch (opcion) {
+                case 1 -> ServicioProveedor.darDeAltaProveedor();
+                case 2 -> ServicioProveedor.listarProveedores();
+                case 3 -> ServicioProveedor.modificarProveedor();
+                case 4 -> ServicioProveedor.eliminarProveedor();
+                case 0 -> System.out.println("Volviendo al menú principal...");
+            }
+            if (opcion != 0) {
+                LectorConsola.pausar();
+            }
+        } while (opcion != 0);
+    }
+
+    private void menuProductos() {
+        int opcion;
+        do {
+            System.out.println("\n---------- MANTENIMIENTO DE PRODUCTOS ----------");
+            System.out.println("1. Dar de alta producto");
+            System.out.println("2. Consultar producto por código");
+            System.out.println("3. Modificar producto");
+            System.out.println("4. Eliminar producto");
+            System.out.println("0. Volver al menú principal");
+
+            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+
+            switch (opcion) {
+                case 1 -> ServicioProducto.darDeAltaProducto();
+                case 2 -> ServicioProducto.consultarProductoPorCodigo();
+                case 3 -> ServicioProducto.modificarProducto();
+                case 4 -> ServicioProducto.eliminarProducto();
+                case 0 -> System.out.println("Volviendo al menú principal...");
+            }
+            if (opcion != 0) {
+                LectorConsola.pausar();
+            }
+        } while (opcion != 0);
+    }
+
+    private void menuConsultasBd() {
+        int opcion;
+        do {
+            System.out.println("\n---------- CONSULTAS Y BÚSQUEDAS EN BD ----------");
+            System.out.println("1. Listar todos los productos (con JOIN)");
+            System.out.println("2. Buscar producto por código exacto");
+            System.out.println("3. Buscar productos por nombre parcial (LIKE)");
+            System.out.println("4. Consultar productos con stock inferior a umbral");
+            System.out.println("0. Volver al menú principal");
+
+            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+
+            switch (opcion) {
+                case 1 -> ServicioConsultaProducto.listarTodosLosProductos();
+                case 2 -> ServicioConsultaProducto.buscarProductoPorCodigoExacto();
+                case 3 -> ServicioConsultaProducto.buscarProductosPorNombreParcial();
+                case 4 -> ServicioConsultaProducto.consultarProductosStockInferior();
+                case 0 -> System.out.println("Volviendo al menú principal...");
+            }
+            if (opcion != 0) {
+                LectorConsola.pausar();
+            }
+        } while (opcion != 0);
     }
 }
