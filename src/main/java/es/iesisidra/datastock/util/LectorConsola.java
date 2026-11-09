@@ -102,6 +102,11 @@ public final class LectorConsola {
         return texto;
     }
 
+    public static String leerLinea(String mensaje) {
+        System.out.print(mensaje);
+        return TECLADO.nextLine().trim();
+    }
+
     /** Detiene el menú hasta que el usuario pulse Intro. */
     public static void pausar() { leerTexto("Pulsa Intro para continuar..."); }
 }
