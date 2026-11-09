@@ -21,7 +21,7 @@ public class ServicioConexionBD {
 
     public static void comprobarConexionInformacion(){
         // Consulta SQL sencilla para cumplir con el requisito de contar los productos actuales en la BD
-        String sqlCount = "SELECT COUNT (*)AS total FROM producto";
+        String sqlCount = "SELECT COUNT(*) AS total FROM producto";
 
         // Estructura try-with-resources: por qué se usa aquí y qué sirve.
         // Garantiza que los recursos pesados (Connection, PreparedStatement, ResultSet) 
