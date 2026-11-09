@@ -1,122 +1,126 @@
-# DataStock – Proyecto inicial (UT1)
+# DataStock - UT2 (Práctica Integradora: Acceso a Datos con JDBC y SQLite)
 
-**Módulo:** Acceso a Datos · 2.º DAM · IES Isidra de Guzmán · Curso 2026–2027  
-**Lenguaje:** Java 25 · **Construcción:** Maven · **Interfaz:** consola
+DataStock es una aplicación de consola en Java desarrollada con Maven para la gestión integral de inventarios. En esta segunda entrega (**UT2**), el proyecto evoluciona para incorporar persistencia relacional mediante **JDBC y MySQL**, manteniendo intactas todas las funcionalidades en memoria de la **UT1** e incorporando una actividad comparativa independiente con **SQLite**.
 
-## 1. ¿Qué es este proyecto?
+---
 
-DataStock es una práctica **individual e integradora** que evolucionará durante tres unidades:
+## 1. Requisitos del Sistema y Dependencias
 
-- **UT1 – Ficheros:** importar JSON/XML, consultar en memoria, exportar, serializar y desarrollar dos actividades independientes (XPath y `RandomAccessFile`).
-- **UT2 – JDBC:** incorporar MySQL, operaciones SQL y transacciones.
-- **UT3 – Componentes:** reorganizar el acceso a datos en componentes reutilizables.
+* **Java Development Kit (JDK):** Versión 21 recomendada (compatible con JDK 17+).
+* **Apache Maven:** Versión 3.8 o superior.
+* **MySQL Server:** Versión 8.0.16 o posterior.
+* **Dependencias Maven (`pom.xml`):**
+  * **MySQL Connector/J:** Versión `8.3.0` (o superior compatible).
+  * **SQLite JDBC Driver (`org.xerial:sqlite-jdbc`):** Versión `3.45.1.0` (para la actividad comparativa).
 
-**Esta entrega inicial solo prepara la UT1.** El código entregado **no resuelve** los requisitos funcionales: los menús muestran mensajes `[PENDIENTE]` hasta que se implementen.
+---
 
-## 2. Requisitos previos
+## 2. Configuración sin Secretos
 
-- JDK **25** instalado y seleccionado en el IDE (`java -version`).
-- Para compilar desde terminal, configura `JAVA_HOME` para que apunte al JDK 25 usado por Maven.
-- Maven instalado, o un IDE con integración Maven.
-- Consola con UTF-8 para ver correctamente tildes y símbolos.
+Para evitar exponer credenciales en el repositorio público, la aplicación lee los parámetros de conexión mediante un fichero de propiedades local o mediante variables de entorno (`JDBC_URL`, `JDBC_USER`, `JDBC_PASSWORD`).
 
-## 3. Cómo abrir y ejecutar
+1. En la ruta `src/main/resources/`, crea un fichero llamado `database.properties` (este archivo está excluido en el `.gitignore` y **nunca** debe subirse a Git).
+2. Utiliza la siguiente estructura basada en la plantilla de ejemplo:
 
-1. Descomprime el ZIP y abre **la carpeta que contiene `pom.xml`** como proyecto Maven en IntelliJ IDEA, Eclipse o VS Code.
-2. Espera a que Maven descargue la dependencia Gson (requiere conexión a Internet la primera vez).
-3. Ejecuta `es.iesisidra.datastock.App` desde el IDE, o en una terminal situada en la raíz:
+   ```properties
+   db.url=jdbc:mysql://localhost:3306/datastock?useSSL=false&serverTimezone=UTC
+   db.user=tu_usuario_mysql
+   db.password=tu_contrasena_segura
+   ```
 
-```bash
-mvn clean compile
-mvn exec:java
-```
+---
 
-Para ejecutar las actividades complementarias (todavía pendientes de desarrollar):
+## 3. Instalación del Esquema de Base de Datos (MySQL)
 
-```bash
-mvn exec:java -Dexec.mainClass=es.iesisidra.datastock.complementarias.XPathActividad
-mvn exec:java -Dexec.mainClass=es.iesisidra.datastock.complementarias.AccesoAleatorioActividad
-```
+El script oficial se encuentra en la carpeta de referencia:
+* **Ruta:** `material_referencia/DataStock_BD_MySQL.sql`
 
-> Si el IDE muestra caracteres de control ANSI, desactiva el color al ejecutar Java con `-Ddatastock.color=false`, o configura la variable de entorno `NO_COLOR=1`.
+Para desplegar el esquema:
+1. Accede a tu gestor MySQL (por ejemplo, MySQL Workbench o consola).
+2. Ejecuta el script para crear la base de datos `datastock`, sus cuatro tablas (`categoria`, `proveedor`, `producto`, `movimiento_stock`) y el procedimiento almacenado `registrar_movimiento`:
+   ```bash
+   mysql -u tu_usuario -p < material_referencia/DataStock_BD_MySQL.sql
+   ```
+*Nota: Las restricciones de integridad (`PRIMARY KEY`, `FOREIGN KEY`, `CHECK`, `UNIQUE`) definidas en el script original se respetan estrictamente desde Java.*
 
-## 4. Organización del proyecto
+---
 
-```text
-DataStock_UT1_Proyecto_Inicial/
-├── pom.xml
-├── README.md
-├── .gitignore
-├── datos/
-│   ├── ejemplos/              # JSON/XML para comenzar las pruebas
-│   └── salidas/               # Exportaciones y binarios generados
-├── material_referencia/       # Modelo relacional y script SQL para UT2
-└── src/main/java/es/iesisidra/datastock/
-    ├── App.java               # Punto de entrada
-    ├── modelo/
-    │   ├── Producto.java
-    │   ├── Categoria.java
-    │   ├── Proveedor.java
-    │   └── MovimientoStock.java
-    ├── servicio/
-    │   └── Inventario.java    # Colección compartida en memoria
-    ├── ui/
-    │   └── MenuPrincipal.java # Menú principal y submenús
-    ├── util/
-    │   ├── LectorConsola.java
-    │   └── ColoresConsola.java
-    └── complementarias/
-        ├── XPathActividad.java
-        └── AccesoAleatorioActividad.java
-```
+## 4. Compilación y Ejecución de la Aplicación
 
-## 5. Menús que ya aparecen
+Desde la raíz del módulo (`DataStock-UT2`):
 
-**Menú principal:**
+1. **Compilar el proyecto:**
+   ```bash
+   mvn clean compile
+   ```
 
-```text
-1. Explorar ficheros y directorios     RF-FIC-01
-2. Importar productos desde JSON       RF-FIC-02
-3. Importar productos desde XML        RF-FIC-03
-4. Consultar productos                 RF-FIC-04
-5. Exportar productos                  RF-FIC-05
-6. Guardar y recuperar inventario      RF-FIC-06
-0. Salir
-```
+2. **Ejecutar la aplicación principal (DataStock):**
+   ```bash
+   mvn exec:java -Dexec.mainClass="es.iesisidra.datastock.App"
+   ```
 
-**4. Consultar productos:** listar, buscar por código, buscar por nombre, volver.  
-**5. Exportar productos:** exportar JSON, exportar XML, volver.  
-**6. Guardar y recuperar inventario:** guardar `.dat`, recuperar `.dat`, volver.
+3. **Ejecutar la actividad independiente de SQLite:**
+   ```bash
+   mvn exec:java -Dexec.mainClass="es.iesisidra.datastock.complementarias.SQLiteComparacionActividad"
+   ```
 
-`RF-FIC-07` (XPath) y `RF-FIC-08` (`RandomAccessFile`) se ejecutan en clases independientes.
+---
 
-## 6. ¿Qué está hecho y qué debes programar?
+## 5. Estructura de Menús de la Aplicación
 
-**Se proporciona:** clases del modelo con Javadoc y getters/setters, colección inicial vacía, navegación de menús, lectura básica de consola, colores ANSI opcionales, configuración Maven y datos de ejemplo.
+La interfaz de consola respeta la continuidad de la UT1 y añade el nuevo menú de gestión JDBC:
 
-**Debes implementar:** la exploración de rutas, lectura/validación/importación JSON y XML, consultas, exportación, serialización y recuperación, XPath y acceso aleatorio. También debes crear las pruebas y registrar sus resultados.
+* **Menú Principal:**
+  1. Explorar ficheros y directorios (UT1)
+  2. Importar productos desde JSON (UT1)
+  3. Importar productos desde XML (UT1)
+  4. Consultar productos en memoria (UT1)
+  5. Exportar productos (UT1)
+  6. Guardar y recuperar inventario - Serialización (UT1)
+  7. **Gestionar base de datos MySQL (UT2)**
+  0. Salir
 
-**Importante:** el menú solo debe **presentar opciones y delegar**. No coloques en el `switch` la lógica de ficheros, JSON, XML, validaciones o serialización. Puedes crear tus propios paquetes y clases, por ejemplo `ficheros`, `validacion`, `servicio`.
+* **Submenú MySQL (Opción 7):**
+  1. Comprobar conexión y mostrar información de la BD (`RF-JDBC-01`)
+  2. Gestionar categorías (Alta, listar, modificar, baja) (`RF-JDBC-02`)
+  3. Gestionar proveedores (Alta, listar, modificar, baja) (`RF-JDBC-03`)
+  4. Gestionar productos - CRUD (`RF-JDBC-03`)
+  5. Consultar y buscar productos (Listados, código, nombre LIKE, umbral stock) (`RF-JDBC-04`)
+  6. Registrar entrada o salida de stock (vía `CallableStatement`) (`RF-JDBC-05`)
+  7. Consultar historial de movimientos (`RF-JDBC-06`)
+  8. Importar productos de memoria a MySQL (con transacción por lotes) (`RF-JDBC-07`)
+  9. Demostración de transacción con commit/rollback (`RF-JDBC-08`)
+  0. Volver al menú principal
 
-La clase `Inventario` contiene la lista compartida; el alumnado debe implementar las reglas de alta, búsqueda y sustitución conforme al enunciado. **No se precargan productos:** se empieza con el inventario vacío.
+---
 
-## 7. Reglas clave del enunciado
+## 6. Arquitectura y Estructura del Código
 
-- JSON raíz `productos` y XML raíz `catalogo` con elementos `producto`.
-- Los campos del producto son `codigo`, `nombre`, `precio`, `stock`, `categoriaId` y `proveedorId`.
-- Los códigos no se duplican, incluso si cambia el uso de mayúsculas/minúsculas.
-- Un documento mal formado o con estructura general inválida **no modifica** el inventario.
-- Si el documento es válido pero contiene registros incorrectos, se incorporan solo los válidos.
-- Importar JSON/XML **añade** productos; recuperar un `.dat` **sustituye** el inventario, tras confirmar cuando corresponda.
-- En UT1 no hay base de datos: los ID de categoría y proveedor se comprueban como enteros positivos, pero no se buscan en MySQL.
-- El fichero `stock.bin` de RF-FIC-08 es una **copia independiente**: los cambios hechos allí no actualizan la colección Java.
+El código fuente se organiza en paquetes limpios con responsabilidades bien definidas:
+* `es.iesisidra.datastock`: Clase principal de arranque (`App.java`).
+* `es.iesisidra.datastock.config`: Configuración y gestión de conexiones JDBC (`ConexionBD.java`).
+* `es.iesisidra.datastock.modelo`: Clases de entidad (`Categoria`, `Proveedor`, `Producto`, `MovimientoStock`).
+* `es.iesisidra.datastock.servicio`: Lógica de negocio, DAOs y transacciones JDBC.
+* `es.iesisidra.datastock.ui`: Interfaz de usuario por consola, menús y explorador de ficheros.
+* `es.iesisidra.datastock.util`: Utilidades de consola, colores ANSI y lectura segura de datos.
+* `es.iesisidra.datastock.complementarias`: Actividades independientes (ej. `SQLiteComparacionActividad.java`).
 
-## 8. GitHub, documentación y pruebas
+---
 
-Crea un repositorio individual, realiza commits con mensajes significativos y mantén actualizado este README con las instrucciones reales de tu solución. Entrega el documento de pruebas cumplimentado con los casos de aceptación del enunciado y conserva ejemplos de entradas válidas e inválidas.
+## 7. Diferencias Técnicas: Memoria / SQLite vs MySQL
 
-Antes de entregar, comprueba que `mvn clean compile` funciona, que el menú no termina ante entradas inválidas y que puedes explicar el código de cada requisito. La práctica y la prueba individual se evaluarán conforme a la programación didáctica.
+### Comparativa de Motores de Persistencia
 
-## 9. Referencia
+| Característica | MySQL | SQLite | Inventario en Memoria (UT1) |
+| :--- | :--- | :--- | :--- |
+| **¿Necesita servidor?** | Sí (Servidor independiente) | No (Motor embebido basado en ficheros) | No (Residente en RAM) |
+| **Almacenamiento** | Tablas relacionales en servidor | Fichero local único o memoria RAM | Colecciones de objetos Java |
+| **Conexión JDBC** | `jdbc:mysql://host:port/db` | `jdbc:sqlite:ruta/fichero.db` | N/A (Estructura interna Java) |
+| **Dependencia Maven** | `mysql-connector-j` | `sqlite-jdbc` | Ninguna |
+| **Ventajas** | Alta concurrencia, robustez, transacciones ACID completas. | Ligero, sin instalación previa, ideal para pruebas y apps locales. | Acceso inmediato en memoria, sin latencia de red/disco. |
+| **Inconvenientes** | Requiere configuración de servidor y permisos. | Bloqueo a nivel de base de datos en escritura masiva. | Volátil (se pierde al cerrar la app si no se serializa). |
+| **Caso de uso ideal** | Aplicaciones corporativas y multiusuario. | Aplicaciones de escritorio o móviles embebidas. | Caché temporal o procesamiento rápido de ficheros. |
 
-Consulta el **enunciado DataStock UT1** facilitado en el aula virtual: es la fuente que determina el comportamiento exigido. El SQL y el diagrama del directorio `material_referencia` se facilitan para entender el proyecto completo; **no hay que conectar MySQL en UT1**.
+### Nota sobre Conexiones Cortas y Pools de Conexiones
+DataStock utiliza un modelo de conexiones acotadas (conexiones cortas abiertas y cerradas mediante `try-with-resources` en cada operación puntual). Esto es idóneo para aplicaciones de consola monousuario locales ya que evita mantener puertos y recursos de servidor ocupados innecesariamente. 
+En entornos web o de alta concurrencia masiva, se emplea un **Pool de Conexiones** (como HikariCP), el cual mantiene un conjunto de conexiones reutilizables pre-creadas para reducir la latencia de apertura y cierre de sockets con la base de datos.

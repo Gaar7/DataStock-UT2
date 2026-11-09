@@ -20,7 +20,6 @@ import es.iesisidra.datastock.servicio.ServicioProveedor;
 import es.iesisidra.datastock.util.ColoresConsola;
 import es.iesisidra.datastock.util.LectorConsola;
 
-
 /**
  * Presentación de menús y navegación de la primera fase de DataStock.
  * <p>
@@ -48,8 +47,6 @@ public class MenuPrincipal {
     private final ConsultaInventarioService consultaService;
     private final ExportadorInventarioService exportadorService;
     private final SerializacionService serializacionService;
-
-
 
     // Este es el constructor obligatorio que App.java está buscando
     public MenuPrincipal(Inventario inventario) {
@@ -95,6 +92,7 @@ public class MenuPrincipal {
             System.out.println("4. Consultar productos");
             System.out.println("5. Exportar productos");
             System.out.println("6. Guardar y recuperar inventario");
+            mostrarCabeceraUT2();
             System.out.println("7. Comprobar conexión y mostrar info de la BD");
             System.out.println("8. Gestión de Categorías");
             System.out.println("9. Gestión de Proveedores");
@@ -169,6 +167,18 @@ public class MenuPrincipal {
                 ColoresConsola.pintar("\n================================================", ColoresConsola.CIAN));
         System.out.println(ColoresConsola.pintar("         DATASTOCK - GESTIÓN DE INVENTARIO", ColoresConsola.NEGRITA));
         System.out.println(ColoresConsola.pintar("                 FASE 1 - UT1", ColoresConsola.CIAN));
+        System.out.println(
+                ColoresConsola.pintar("================================================", ColoresConsola.CIAN));
+        System.out.println(ColoresConsola.pintar("Productos en memoria: " + inventario.getProductos().size(),
+                ColoresConsola.GRIS));
+    }
+
+    private void mostrarCabeceraUT2() {
+        System.out.println(
+                ColoresConsola.pintar("\n================================================", ColoresConsola.CIAN));
+        System.out.println(
+                ColoresConsola.pintar("         DATASTOCK - CONEXIÓN A BASES DE DATOS", ColoresConsola.NEGRITA));
+        System.out.println(ColoresConsola.pintar("                 FASE 2 - UT2", ColoresConsola.CIAN));
         System.out.println(
                 ColoresConsola.pintar("================================================", ColoresConsola.CIAN));
         System.out.println(ColoresConsola.pintar("Productos en memoria: " + inventario.getProductos().size(),
@@ -480,6 +490,7 @@ public class MenuPrincipal {
         System.out.println("Esta funcionalidad debe desarrollarla el alumnado.");
         LectorConsola.pausar();
     }
+
     private void menuCategorias() {
         int opcion;
         do {
