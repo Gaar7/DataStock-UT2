@@ -1,15 +1,24 @@
+
 package es.iesisidra.datastock.ui;
 
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.SQLException;
+import java.util.Optional;
+
+import com.google.gson.JsonParseException;
 
 import es.iesisidra.datastock.modelo.Producto;
 import es.iesisidra.datastock.servicio.ConsultaInventarioService;
+import es.iesisidra.datastock.servicio.ConsultaProductoJdbc;
 import es.iesisidra.datastock.servicio.ExportadorInventarioService;
-import es.iesisidra.datastock.servicio.ImportadorJsonService;
 import es.iesisidra.datastock.servicio.ImportadorXmlService;
 import es.iesisidra.datastock.servicio.Inventario;
+import es.iesisidra.datastock.servicio.LectorProductosJson;
 import es.iesisidra.datastock.servicio.SerializacionService;
 import es.iesisidra.datastock.servicio.ServicioCategoria;
 import es.iesisidra.datastock.servicio.ServicioConexionBD;
@@ -21,39 +30,38 @@ import es.iesisidra.datastock.util.ColoresConsola;
 import es.iesisidra.datastock.util.LectorConsola;
 
 /**
- * Presentación de menús y navegación de la primera fase de DataStock.
- * <p>
- * Los métodos marcados TODO son puntos de partida, NO soluciones de los
- * requisitos. El alumnado deberá delegar el acceso a ficheros, la validación y
- * el procesamiento en métodos o clases independientes.
- * </p>
- */
-/**
- * Clase encargada de la parte visual y de la navegación de DataStock. Muestra
- * los menús, recoge las opciones del usuario y llama a los métodos de
- * Inventario para realizar las operaciones.
+ * Gestiona la presentación y la navegación de los menús de DataStock.
  *
- * No contiene la lógica principal de importación, búsqueda o exportación: esa
- * responsabilidad está en Inventario. También utiliza LectorConsola para leer
- * datos y ColoresConsola para dar formato a algunos mensajes.
+ * La clase solicita los datos al usuario, delega las operaciones en los
+ * componentes correspondientes y muestra los resultados por consola.
+ * La lectura JSON se realiza mediante LectorProductosJson y la
+ * búsqueda JDBC por código mediante ConsultaProductoJdbc.
  */
 public class MenuPrincipal {
 
-    // Referencia al inventario compartido por todos los menús.
-    // Es final porque se asigna en el constructor y no se reemplaza después.
+    /** Inventario compartido por los distintos menús de la aplicación. */
     private final Inventario inventario;
-    private final ImportadorJsonService importadorJson;
+
+    /** Componente encargado de leer y validar productos desde JSON. */
+    private final LectorProductosJson lectorProductosJson;
+
+    /** Componente encargado de consultar productos en MySQL por código. */
+    private final ConsultaProductoJdbc consultaProductoJdbc;
+
     private final ImportadorXmlService importadorXml;
     private final ConsultaInventarioService consultaService;
     private final ExportadorInventarioService exportadorService;
     private final SerializacionService serializacionService;
 
-    // Este es el constructor obligatorio que App.java está buscando
+    /**
+     * Construye el menú principal y prepara los componentes que utilizará.
+     *
+     * @param inventario inventario compartido durante la ejecución.
+     */
     public MenuPrincipal(Inventario inventario) {
         this.inventario = inventario;
-
-        // Inyectamos el inventario en los servicios
-        this.importadorJson = new ImportadorJsonService(inventario);
+        this.lectorProductosJson = new LectorProductosJson();
+        this.consultaProductoJdbc = new ConsultaProductoJdbc();
         this.importadorXml = new ImportadorXmlService(inventario);
         this.consultaService = new ConsultaInventarioService(inventario);
         this.exportadorService = new ExportadorInventarioService(inventario);
@@ -61,29 +69,12 @@ public class MenuPrincipal {
     }
 
     /**
-     * @param inventario colección común de productos de esta ejecución.
-     */
-    /**
-     * Constructor del menú principal. Recibe el inventario que se va a utilizar
-     * durante toda la ejecución y lo guarda en el atributo de la clase.
-     *
-     * De esta forma, todos los submenús trabajan sobre la misma lista de
-     * productos y no crean inventarios independientes.
-     */
-    /**
-     * Ejecuta el menú principal hasta que el usuario selecciona salir.
-     */
-    /**
-     * Muestra el menú principal repetidamente hasta que el usuario elige 0.
-     * Primero presenta la cabecera y las opciones, después lee una opción
-     * válida y ejecuta la acción correspondiente mediante el switch.
-     *
-     * Las opciones de consulta, exportación y serialización abren sus
-     * respectivos submenús. Los break evitan que se ejecute también el
-     * siguiente case de este switch.
+     * Muestra el menú principal y ejecuta la opción seleccionada hasta que el
+     * usuario elige salir.
      */
     public void iniciar() {
         int opcion;
+
         do {
             mostrarCabecera();
             System.out.println("1. Explorar ficheros y directorios");
@@ -100,117 +91,153 @@ public class MenuPrincipal {
             System.out.println("11. Consultas y Búsquedas Avanzadas en BD");
             System.out.println("12. Registrar Movimiento de Stock");
             System.out.println("0. Salir");
-            // LectorConsola valida que la opción esté dentro del rango permitido.
+
             opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 12);
+
             switch (opcion) {
-                case 1:
-                    String ruta = LectorConsola.leerTexto("Introduce la ruta a explorar: ");
+                case 1 -> {
+                    String ruta = LectorConsola.leerTexto(
+                            "Introduce la ruta a explorar: ");
                     ExploradorFicheros.explorarRuta(ruta);
                     LectorConsola.pausar();
-                    break;
-                case 2:
-                    String rutaJson = LectorConsola.leerTexto("Introduce la ruta del JSON: ");
-                    importadorJson.importarDesdeJson(rutaJson);
+                }
+                case 2 -> {
+                    importarProductosJson();
                     LectorConsola.pausar();
-                    break;
-                case 3:
-                    String rutaXml = LectorConsola.leerTexto("Introduce la ruta del XML: ");
+                }
+                case 3 -> {
+                    String rutaXml = LectorConsola.leerTexto(
+                            "Introduce la ruta del XML: ");
                     importadorXml.importarDesdeXml(rutaXml);
                     LectorConsola.pausar();
-                    break;
-                case 4:
-                    menuConsultas();
-                    break;
-                case 5:
-                    menuExportaciones();
-                    break;
-                case 6:
-                    menuSerializacion();
-                    break;
-                // --- NUEVAS OPCIONES UT2 ---
-                case 7:
+                }
+                case 4 -> menuConsultas();
+                case 5 -> menuExportaciones();
+                case 6 -> menuSerializacion();
+                case 7 -> {
                     ServicioConexionBD.comprobarConexionInformacion();
                     LectorConsola.pausar();
-                    break;
-                case 8:
-                    menuCategorias();
-                    break;
-                case 9:
-                    menuProveedores();
-                    break;
-                case 10:
-                    menuProductos();
-                    break;
-                case 11:
-                    menuConsultasBd();
-                    break;
-                case 12:
+                }
+                case 8 -> menuCategorias();
+                case 9 -> menuProveedores();
+                case 10 -> menuProductos();
+                case 11 -> menuConsultasBd();
+                case 12 -> {
                     ServicioMovimientoStock.registrarMovimientoStock();
                     LectorConsola.pausar();
-                    break;
-                case 0:
-                    System.out.println(ColoresConsola.pintar("Hasta pronto.", ColoresConsola.VERDE));
-                    break;
-                default:
-                    throw new IllegalStateException("Opción inesperada");
+                }
+                case 0 -> System.out.println(
+                        ColoresConsola.pintar("Hasta pronto.", ColoresConsola.VERDE));
+                default -> throw new IllegalStateException("Opción inesperada");
             }
         } while (opcion != 0);
     }
 
     /**
-     * Muestra el encabezado de DataStock y el número de productos que hay
-     * actualmente en memoria. Obtiene ese número consultando la lista del
-     * objeto Inventario que recibió el constructor.
+     * Solicita un fichero JSON, delega su lectura y validación y añade al
+     * inventario los productos válidos que devuelve el componente.
+     *
+     * El método también presenta por consola el resumen y las incidencias.
      */
+    private void importarProductosJson() {
+        String rutaTexto = LectorConsola.leerTexto(
+                "Introduce la ruta del JSON: ");
+
+        try {
+            Path ruta = Paths.get(rutaTexto);
+            LectorProductosJson.ResultadoLectura resultado =
+                    lectorProductosJson.leerProductos(ruta);
+
+            int importados = resultado.productosValidos().size();
+            int rechazados = resultado.incidencias().size();
+            int encontrados = importados + rechazados;
+
+            // El componente devuelve productos válidos, pero no modifica el inventario.
+            inventario.getProductos().addAll(resultado.productosValidos());
+
+            System.out.println("\n===== IMPORTAR JSON =====");
+            System.out.println("Productos encontrados: " + encontrados);
+            System.out.println("Importados: " + importados + " | Rechazados: " + rechazados);
+
+            if (!resultado.incidencias().isEmpty()) {
+                System.out.println(ColoresConsola.pintar(
+                        "[AVISO] Algunos productos no cumplen las validaciones:",
+                        ColoresConsola.AMARILLO));
+
+                for (String incidencia : resultado.incidencias()) {
+                    System.out.println(" - " + incidencia);
+                }
+            }
+
+            System.out.println(ColoresConsola.pintar(
+                    "[OK] Fichero JSON leído e importación finalizada.",
+                    ColoresConsola.VERDE));
+
+        } catch (NoSuchFileException e) {
+            System.out.println(ColoresConsola.pintar(
+                    "[ERROR] No se encuentra el fichero: " + e.getFile(),
+                    ColoresConsola.ROJO));
+
+        } catch (JsonParseException e) {
+            System.out.println(ColoresConsola.pintar(
+                    "[ERROR] El fichero JSON está mal formado o tiene una estructura incorrecta: "
+                            + e.getMessage(),
+                    ColoresConsola.ROJO));
+
+        } catch (InvalidPathException e) {
+            System.out.println(ColoresConsola.pintar(
+                    "[ERROR] La ruta introducida no es válida: " + e.getInput(),
+                    ColoresConsola.ROJO));
+
+        } catch (IOException e) {
+            System.out.println(ColoresConsola.pintar(
+                    "[ERROR] No se pudo leer el fichero JSON: " + e.getMessage(),
+                    ColoresConsola.ROJO));
+        }
+    }
+
+    /** Muestra la cabecera de la aplicación y el número de productos en memoria. */
     private void mostrarCabecera() {
-        System.out.println(
-                ColoresConsola.pintar("\n================================================", ColoresConsola.CIAN));
-        System.out.println(ColoresConsola.pintar("         DATASTOCK - GESTIÓN DE INVENTARIO", ColoresConsola.NEGRITA));
-        System.out.println(ColoresConsola.pintar("                 FASE 1 - UT1", ColoresConsola.CIAN));
-        System.out.println(
-                ColoresConsola.pintar("================================================", ColoresConsola.CIAN));
-        System.out.println(ColoresConsola.pintar("Productos en memoria: " + inventario.getProductos().size(),
+        System.out.println(ColoresConsola.pintar(
+                "\n================================================", ColoresConsola.CIAN));
+        System.out.println(ColoresConsola.pintar(
+                "         DATASTOCK - GESTIÓN DE INVENTARIO", ColoresConsola.NEGRITA));
+        System.out.println(ColoresConsola.pintar(
+                "                 FASE 1 - UT1", ColoresConsola.CIAN));
+        System.out.println(ColoresConsola.pintar(
+                "================================================", ColoresConsola.CIAN));
+        System.out.println(ColoresConsola.pintar(
+                "Productos en memoria: " + inventario.getProductos().size(),
                 ColoresConsola.GRIS));
     }
 
+    /** Muestra la cabecera de la sección de base de datos y el número de productos en memoria. */
     private void mostrarCabeceraUT2() {
-        System.out.println(
-                ColoresConsola.pintar("\n================================================", ColoresConsola.CIAN));
-        System.out.println(
-                ColoresConsola.pintar("         DATASTOCK - CONEXIÓN A BASES DE DATOS", ColoresConsola.NEGRITA));
-        System.out.println(ColoresConsola.pintar("                 FASE 2 - UT2", ColoresConsola.CIAN));
-        System.out.println(
-                ColoresConsola.pintar("================================================", ColoresConsola.CIAN));
-        System.out.println(ColoresConsola.pintar("Productos en memoria: " + inventario.getProductos().size(),
+        System.out.println(ColoresConsola.pintar(
+                "\n================================================", ColoresConsola.CIAN));
+        System.out.println(ColoresConsola.pintar(
+                "         DATASTOCK - CONEXIÓN A BASES DE DATOS", ColoresConsola.NEGRITA));
+        System.out.println(ColoresConsola.pintar(
+                "                 FASE 2 - UT2", ColoresConsola.CIAN));
+        System.out.println(ColoresConsola.pintar(
+                "================================================", ColoresConsola.CIAN));
+        System.out.println(ColoresConsola.pintar(
+                "Productos en memoria: " + inventario.getProductos().size(),
                 ColoresConsola.GRIS));
     }
 
-    /**
-     * Muestra por consola todos los datos de un producto. Recibe un objeto
-     * Producto y utiliza sus getters para consultar el código, nombre, precio,
-     * stock, categoría y proveedor.
-     *
-     * Este método evita repetir el mismo bloque de impresión en las distintas
-     * opciones de búsqueda y listado.
-     */
-    private void mostrarProducto(es.iesisidra.datastock.modelo.Producto p) {
+    /** Muestra por consola los datos principales de un producto. */
+    private void mostrarProducto(Producto producto) {
         System.out.println("--------------------------------");
-        System.out.println("Código: " + p.getCodigo());
-        System.out.println("Nombre: " + p.getNombre());
-        System.out.println("Precio: " + p.getPrecio() + " €");
-        System.out.println("Stock: " + p.getStock());
-        System.out.println("Categoría: " + p.getCategoriaId());
-        System.out.println("Proveedor: " + p.getProveedorId());
+        System.out.println("Código: " + producto.getCodigo());
+        System.out.println("Nombre: " + producto.getNombre());
+        System.out.println("Precio: " + producto.getPrecio() + " €");
+        System.out.println("Stock: " + producto.getStock());
+        System.out.println("Categoría: " + producto.getCategoriaId());
+        System.out.println("Proveedor: " + producto.getProveedorId());
     }
 
-    /**
-     * Gestiona el submenú de consultas. Permite listar todos los productos,
-     * buscar uno por código o buscar varios por una parte de su nombre. Las
-     * búsquedas se delegan en Inventario y los resultados se muestran con
-     * mostrarProducto().
-     *
-     * El bucle do-while mantiene abierto este submenú hasta elegir 0.
-     */
+    /** Gestiona las consultas sobre el inventario que está cargado en memoria. */
     private void menuConsultas() {
         int opcion;
 
@@ -230,66 +257,52 @@ public class MenuPrincipal {
                         System.out.println("No hay productos en el inventario.");
                     } else {
                         System.out.println("\n===== LISTADO DE PRODUCTOS =====");
-
-                        // Inventario devuelve una copia ordenada por código.
-                        for (Producto p : consultaService.obtenerProductosOrdenados()) {
-                            mostrarProducto(p);
+                        for (Producto producto : consultaService.obtenerProductosOrdenados()) {
+                            mostrarProducto(producto);
                         }
                     }
                 }
-
                 case 2 -> {
                     String codigo = LectorConsola.leerTexto(
                             "Introduce el código del producto: ");
-                    // La búsqueda real se realiza en Inventario.
-                    Producto p = consultaService.buscarPorCodigo(codigo);
+                    Producto producto = consultaService.buscarPorCodigo(codigo);
 
-                    if (p != null) {
+                    if (producto != null) {
                         System.out.println("\n===== PRODUCTO ENCONTRADO =====");
-                        mostrarProducto(p);
+                        mostrarProducto(producto);
                     } else {
-                        System.out.println("No existe ningún producto con ese código.");
+                        System.out.println(
+                                "No existe ningún producto con ese código.");
                     }
                 }
-
                 case 3 -> {
                     String nombre = LectorConsola.leerTexto(
                             "Introduce el texto a buscar en el nombre: ");
 
                     if (nombre.trim().isEmpty()) {
-                        System.out.println("Debes introducir un texto para buscar.");
+                        System.out.println(
+                                "Debes introducir un texto para buscar.");
                     } else {
-                        // Se buscan coincidencias en el nombre del producto.
                         var encontrados = consultaService.buscarPorNombre(nombre);
 
                         if (encontrados.isEmpty()) {
                             System.out.println("No se encontraron productos.");
                         } else {
                             System.out.println("\n===== PRODUCTOS ENCONTRADOS =====");
-
-                            for (Producto p : encontrados) {
-                                mostrarProducto(p);
+                            for (Producto producto : encontrados) {
+                                mostrarProducto(producto);
                             }
-
-                            System.out.println("Total encontrados: "
-                                    + encontrados.size());
+                            System.out.println("Total encontrados: " + encontrados.size());
                         }
                     }
                 }
-
-                case 0 -> {
-                    System.out.println("Volviendo al menú principal...");
-                }
+                case 0 -> System.out.println("Volviendo al menú principal...");
+                default -> throw new IllegalStateException("Opción inesperada");
             }
-
         } while (opcion != 0);
     }
 
-    /**
-     * Muestra el submenú de exportación y permite elegir JSON o XML. Según la
-     * opción seleccionada, llama a gestionarExportacion() indicando el formato.
-     * El submenú se repite hasta elegir 0.
-     */
+    /** Muestra las opciones de exportación a JSON y XML. */
     private void menuExportaciones() {
         int opcion;
 
@@ -303,46 +316,33 @@ public class MenuPrincipal {
                     "Selecciona una opción: ", 0, 2);
 
             switch (opcion) {
-                case 1 ->
-                    gestionarExportacion(true);
-                case 2 ->
-                    gestionarExportacion(false);
-                case 0 ->
-                    System.out.println("Volviendo al menú principal...");
+                case 1 -> gestionarExportacion(true);
+                case 2 -> gestionarExportacion(false);
+                case 0 -> System.out.println("Volviendo al menú principal...");
+                default -> throw new IllegalStateException("Opción inesperada");
             }
 
             if (opcion != 0) {
                 LectorConsola.pausar();
             }
-
         } while (opcion != 0);
     }
 
     /**
-     * Solicita la ruta y gestiona la exportación elegida.
+     * Solicita la ruta de destino y gestiona la exportación al formato indicado.
      *
-     * @param json true para JSON y false para XML.
-     */
-    /**
-     * Gestiona los pasos comunes antes de exportar a JSON o XML. Comprueba que
-     * el inventario no esté vacío, pide la ruta de destino y, si el fichero ya
-     * existe, solicita confirmación para sobrescribirlo.
-     *
-     * El parámetro json determina el formato: true significa JSON y false
-     * significa XML. Finalmente delega la escritura en Inventario.
+     * @param json true para exportar a JSON; false para exportar a XML.
      */
     private void gestionarExportacion(boolean json) {
         if (inventario.getProductos().isEmpty()) {
             System.out.println("No hay productos para exportar.");
         } else {
             String formato = json ? "JSON" : "XML";
-
             String rutaTexto = LectorConsola.leerTexto(
                     "Introduce la ruta de destino del " + formato + ": ");
 
             try {
                 Path ruta = Paths.get(rutaTexto);
-                // Solo se permitirá reemplazar el fichero si el usuario confirma.
                 boolean sobrescribir = false;
 
                 if (Files.exists(ruta)) {
@@ -359,27 +359,19 @@ public class MenuPrincipal {
                 } else {
                     System.out.println("Exportación cancelada.");
                 }
-
             } catch (Exception e) {
-                System.out.println("Error en la ruta de destino: "
-                        + e.getMessage());
+                System.out.println("Error en la ruta de destino: " + e.getMessage());
             }
         }
     }
 
-    /**
-     * Pide la ruta donde se guardará el inventario en un fichero .dat. Si el
-     * fichero ya existe, pregunta al usuario si desea sobrescribirlo. Si no
-     * existe o el usuario confirma, llama a guardarInventario() de la clase
-     * Inventario.
-     */
+    /** Solicita la ruta y guarda el inventario en un fichero serializado. */
     private void gestionarGuardado() {
         String ruta = LectorConsola.leerTexto(
                 "Introduce la ruta del fichero .dat: ");
 
         try {
             Path destino = Paths.get(ruta);
-
             boolean sobrescribir = false;
 
             if (Files.exists(destino)) {
@@ -392,25 +384,19 @@ public class MenuPrincipal {
             } else {
                 System.out.println("Guardado cancelado.");
             }
-
         } catch (Exception e) {
             System.out.println("Error en la ruta: " + e.getMessage());
         }
     }
 
-    /**
-     * Controla la recuperación de un inventario desde un fichero .dat. Si el
-     * inventario actual está vacío, permite recuperar directamente. Si contiene
-     * productos, pide confirmación porque la recuperación sustituirá los datos
-     * que hay actualmente en memoria.
-     */
+    /** Gestiona la confirmación antes de sustituir el inventario actual. */
     private void gestionarRecuperacion() {
         if (inventario.getProductos().isEmpty()) {
             recuperarDesdeFichero();
         } else {
             boolean confirmar = LectorConsola.confirmar(
                     "Se sustituirá el inventario actual. ¿Continuar?");
-            // La recuperación sustituye los productos que ya están en memoria.
+
             if (confirmar) {
                 recuperarDesdeFichero();
             } else {
@@ -419,12 +405,7 @@ public class MenuPrincipal {
         }
     }
 
-    /**
-     * Solicita la ruta del fichero .dat que contiene el inventario guardado y
-     * delega la lectura y sustitución de los productos en Inventario. El
-     * try-catch permite mostrar un mensaje si se produce un error relacionado
-     * con la ruta o con la recuperación.
-     */
+    /** Solicita el fichero serializado y delega la recuperación del inventario. */
     private void recuperarDesdeFichero() {
         String ruta = LectorConsola.leerTexto(
                 "Introduce la ruta del fichero .dat: ");
@@ -436,11 +417,7 @@ public class MenuPrincipal {
         }
     }
 
-    /**
-     * Muestra el submenú para guardar o recuperar el inventario. La opción 1
-     * llama al método de gestión del guardado y la opción 2 al de recuperación.
-     * Se repite hasta que el usuario elige 0.
-     */
+    /** Muestra el submenú para guardar y recuperar el inventario. */
     private void menuSerializacion() {
         int opcion;
 
@@ -457,42 +434,30 @@ public class MenuPrincipal {
                     "Selecciona una opción: ", 0, 2);
 
             switch (opcion) {
-                case 1 ->
-                    gestionarGuardado();
-                case 2 ->
-                    gestionarRecuperacion();
-                case 0 ->
-                    System.out.println(
-                            "Volviendo al menú principal...");
+                case 1 -> gestionarGuardado();
+                case 2 -> gestionarRecuperacion();
+                case 0 -> System.out.println("Volviendo al menú principal...");
+                default -> throw new IllegalStateException("Opción inesperada");
             }
 
             if (opcion != 0) {
                 LectorConsola.pausar();
             }
-
         } while (opcion != 0);
     }
 
-    /**
-     * Sustituir las llamadas por servicios propios a medida que se implementen
-     * los RF.
-     */
-    /**
-     * Método auxiliar para mostrar que una funcionalidad está pendiente. Recibe
-     * el nombre del requisito, lo muestra resaltado y pausa la ejecución para
-     * que el usuario pueda leer el mensaje.
-     *
-     * En esta versión se conserva como método auxiliar, aunque las operaciones
-     * principales ya se realizan mediante otros métodos.
-     */
+    /** Muestra un aviso para una funcionalidad pendiente de desarrollo. */
     private void pendiente(String requisito) {
-        System.out.println(ColoresConsola.pintar("[PENDIENTE] " + requisito, ColoresConsola.AMARILLO));
+        System.out.println(ColoresConsola.pintar(
+                "[PENDIENTE] " + requisito, ColoresConsola.AMARILLO));
         System.out.println("Esta funcionalidad debe desarrollarla el alumnado.");
         LectorConsola.pausar();
     }
 
+    /** Muestra el submenú de gestión de categorías. */
     private void menuCategorias() {
         int opcion;
+
         do {
             System.out.println("\n---------- GESTIÓN DE CATEGORÍAS ----------");
             System.out.println("1. Dar de alta categoría");
@@ -501,7 +466,8 @@ public class MenuPrincipal {
             System.out.println("4. Eliminar categoría");
             System.out.println("0. Volver al menú principal");
 
-            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+            opcion = LectorConsola.leerOpcion(
+                    "Selecciona una opción: ", 0, 4);
 
             switch (opcion) {
                 case 1 -> ServicioCategoria.darDeAltaCategoria();
@@ -509,15 +475,19 @@ public class MenuPrincipal {
                 case 3 -> ServicioCategoria.modificarCategoria();
                 case 4 -> ServicioCategoria.eliminarCategoria();
                 case 0 -> System.out.println("Volviendo al menú principal...");
+                default -> throw new IllegalStateException("Opción inesperada");
             }
+
             if (opcion != 0) {
                 LectorConsola.pausar();
             }
         } while (opcion != 0);
     }
 
+    /** Muestra el submenú de gestión de proveedores. */
     private void menuProveedores() {
         int opcion;
+
         do {
             System.out.println("\n---------- GESTIÓN DE PROVEEDORES ----------");
             System.out.println("1. Dar de alta proveedor");
@@ -526,7 +496,8 @@ public class MenuPrincipal {
             System.out.println("4. Eliminar proveedor");
             System.out.println("0. Volver al menú principal");
 
-            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+            opcion = LectorConsola.leerOpcion(
+                    "Selecciona una opción: ", 0, 4);
 
             switch (opcion) {
                 case 1 -> ServicioProveedor.darDeAltaProveedor();
@@ -534,15 +505,19 @@ public class MenuPrincipal {
                 case 3 -> ServicioProveedor.modificarProveedor();
                 case 4 -> ServicioProveedor.eliminarProveedor();
                 case 0 -> System.out.println("Volviendo al menú principal...");
+                default -> throw new IllegalStateException("Opción inesperada");
             }
+
             if (opcion != 0) {
                 LectorConsola.pausar();
             }
         } while (opcion != 0);
     }
 
+    /** Muestra el submenú de mantenimiento de productos. */
     private void menuProductos() {
         int opcion;
+
         do {
             System.out.println("\n---------- MANTENIMIENTO DE PRODUCTOS ----------");
             System.out.println("1. Dar de alta producto");
@@ -551,7 +526,8 @@ public class MenuPrincipal {
             System.out.println("4. Eliminar producto");
             System.out.println("0. Volver al menú principal");
 
-            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+            opcion = LectorConsola.leerOpcion(
+                    "Selecciona una opción: ", 0, 4);
 
             switch (opcion) {
                 case 1 -> ServicioProducto.darDeAltaProducto();
@@ -559,15 +535,60 @@ public class MenuPrincipal {
                 case 3 -> ServicioProducto.modificarProducto();
                 case 4 -> ServicioProducto.eliminarProducto();
                 case 0 -> System.out.println("Volviendo al menú principal...");
+                default -> throw new IllegalStateException("Opción inesperada");
             }
+
             if (opcion != 0) {
                 LectorConsola.pausar();
             }
         } while (opcion != 0);
     }
 
+    /**
+     * Solicita un código y presenta el resultado de la consulta JDBC.
+     * La consulta y el cierre de los recursos pertenecen a
+     * ConsultaProductoJdbc; este método gestiona la interacción con el
+     * usuario y muestra la ficha recuperada.
+     */
+    private void buscarProductoPorCodigoEnBd() {
+        System.out.println("\n=== BÚSQUEDA EXACTA POR CÓDIGO ===");
+        String codigo = LectorConsola.leerCadenaNoVacia(
+                "Introduce el código exacto del producto: ");
+
+        try {
+            Optional<ConsultaProductoJdbc.ResultadoConsulta> resultado =
+                    consultaProductoJdbc.buscarPorCodigo(codigo);
+
+            if (resultado.isPresent()) {
+                ConsultaProductoJdbc.ResultadoConsulta ficha = resultado.get();
+                Producto producto = ficha.producto();
+
+                System.out.println(ColoresConsola.pintar(
+                        "\n[OK] Producto encontrado:", ColoresConsola.VERDE));
+                System.out.println("Código    : " + producto.getCodigo());
+                System.out.println("Nombre    : " + producto.getNombre());
+                System.out.println("Precio    : " + producto.getPrecio() + " EUR");
+                System.out.println("Stock     : " + producto.getStock());
+                System.out.println("Categoría : " + ficha.nombreCategoria());
+                System.out.println("Proveedor : " + ficha.nombreProveedor());
+            } else {
+                System.out.println(ColoresConsola.pintar(
+                        "[AVISO] No se ha encontrado ningún producto con el código "
+                                + codigo.trim().toUpperCase() + ".",
+                        ColoresConsola.AMARILLO));
+            }
+        } catch (SQLException e) {
+            System.out.println(ColoresConsola.pintar(
+                    "[ERROR] No se pudo realizar la búsqueda del producto en MySQL: "
+                            + e.getMessage(),
+                    ColoresConsola.ROJO));
+        }
+    }
+
+    /** Muestra las consultas disponibles sobre la base de datos MySQL. */
     private void menuConsultasBd() {
         int opcion;
+
         do {
             System.out.println("\n---------- CONSULTAS Y BÚSQUEDAS EN BD ----------");
             System.out.println("1. Listar todos los productos (con JOIN)");
@@ -576,15 +597,18 @@ public class MenuPrincipal {
             System.out.println("4. Consultar productos con stock inferior a umbral");
             System.out.println("0. Volver al menú principal");
 
-            opcion = LectorConsola.leerOpcion("Selecciona una opción: ", 0, 4);
+            opcion = LectorConsola.leerOpcion(
+                    "Selecciona una opción: ", 0, 4);
 
             switch (opcion) {
                 case 1 -> ServicioConsultaProducto.listarTodosLosProductos();
-                case 2 -> ServicioConsultaProducto.buscarProductoPorCodigoExacto();
+                case 2 -> buscarProductoPorCodigoEnBd();
                 case 3 -> ServicioConsultaProducto.buscarProductosPorNombreParcial();
                 case 4 -> ServicioConsultaProducto.consultarProductosStockInferior();
                 case 0 -> System.out.println("Volviendo al menú principal...");
+                default -> throw new IllegalStateException("Opción inesperada");
             }
+
             if (opcion != 0) {
                 LectorConsola.pausar();
             }

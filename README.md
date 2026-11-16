@@ -1,4 +1,4 @@
-# DataStock - UT2 (Práctica Integradora: Acceso a Datos con JDBC y SQLite)
+# DataStock - Práctica Integradora de Acceso a Datos (UT1, UT2 y UT3)
 
 DataStock es una aplicación de consola en Java desarrollada con Maven para la gestión integral de inventarios. En esta segunda entrega (**UT2**), el proyecto evoluciona para incorporar persistencia relacional mediante **JDBC y MySQL**, manteniendo intactas todas las funcionalidades en memoria de la **UT1** e incorporando una actividad comparativa independiente con **SQLite**.
 
@@ -124,3 +124,14 @@ El código fuente se organiza en paquetes limpios con responsabilidades bien def
 ### Nota sobre Conexiones Cortas y Pools de Conexiones
 DataStock utiliza un modelo de conexiones acotadas (conexiones cortas abiertas y cerradas mediante `try-with-resources` en cada operación puntual). Esto es idóneo para aplicaciones de consola monousuario locales ya que evita mantener puertos y recursos de servidor ocupados innecesariamente. 
 En entornos web o de alta concurrencia masiva, se emplea un **Pool de Conexiones** (como HikariCP), el cual mantiene un conjunto de conexiones reutilizables pre-creadas para reducir la latencia de apertura y cierre de sockets con la base de datos.
+---
+
+## 8. UT3: componentes reutilizables
+
+En esta entrega se han separado dos operaciones de acceso a datos para que no dependan directamente de los menús. El componente `LectorProductosJson` recibe la ruta de un fichero JSON, lo convierte en objetos `Producto`, aplica las validaciones y devuelve los productos válidos junto con las incidencias detectadas. La lectura queda así separada de la presentación por consola y de la modificación del inventario. Esto permite reutilizar el lector desde otra parte de la aplicación o desde pruebas sin tener que simular la interacción con el usuario. Como inconveniente, la separación añade clases y exige mantener claras sus responsabilidades y la forma en que intercambian los resultados.
+
+Por otro lado, `ConsultaProductoJdbc` encapsula la búsqueda de un producto por código en MySQL. Utiliza `PreparedStatement` y `ResultSet`, cierra los recursos JDBC mediante `try-with-resources` y devuelve un resultado que permite distinguir entre un producto encontrado y uno inexistente. La presentación de la ficha, los avisos y los errores sigue correspondiendo al menú. Separar la consulta JDBC de la consola evita mezclar SQL, conexión y presentación, y facilita reutilizar y probar la operación de forma independiente.
+
+La integración mantiene los menús existentes: la opción 2 del menú principal utiliza `LectorProductosJson` para importar los productos válidos; la búsqueda exacta por código del submenú de consultas MySQL utiliza `ConsultaProductoJdbc` (en esta versión, menú principal 11 y opción 2). Las demás consultas de `ServicioConsultaProducto` y las consultas del inventario en memoria se conservan.
+
+Para desarrollar y mantener el proyecto se utiliza un IDE (Visual Studio Code), que permite editar, organizar y ejecutar el código; Maven, que gestiona las dependencias y las tareas de compilación y ejecución con Java 21; y Javadoc, cuyos comentarios documentan las clases y métodos públicos y permiten generar la documentación de la API. JUnit 5 no se ha incorporado en esta entrega: el enunciado permite realizar las tres comprobaciones funcionales manualmente y registrar sus datos, resultados esperados, resultados obtenidos y estado.
