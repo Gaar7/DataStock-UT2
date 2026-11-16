@@ -1,5 +1,6 @@
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\App.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\complementarias\AccesoAleatorioActividad.java
+C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\complementarias\SQLiteComparacionActividad.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\complementarias\XPathActividad.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\config\ConexionBD.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\modelo\Categoria.java
@@ -7,10 +8,11 @@ C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\modelo\Producto.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\modelo\Proveedor.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\ConsultaInventarioService.java
+C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\ConsultaProductoJdbc.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\ExportadorInventarioService.java
-C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\ImportadorJsonService.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\ImportadorXmlService.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\Inventario.java
+C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\LectorProductosJson.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\SerializacionService.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\ServicioCategoria.java
 C:\Users\aleja\OneDrive\Escritorio\2ºDAM\ACCESO A DATOS\DataStock-UT2\src\main\java\es\iesisidra\datastock\servicio\ServicioConexionBD.java
