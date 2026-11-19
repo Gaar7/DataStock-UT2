@@ -21,7 +21,6 @@ public class ServicioConexionBD {
      * gestor y realiza un recuento de los productos almacenados en la tabla
      * correspondiente.
      */
-
     public static void comprobarConexionInformacion() {
         // Consulta SQL sencilla para cumplir con el requisito de contar los productos actuales en la BD
         String sqlCount = "SELECT COUNT(*) AS total FROM producto";
@@ -54,7 +53,7 @@ public class ServicioConexionBD {
             // Tratamiento de errores controlado: captura excepciones de SQL (servidor apagado, credenciales inválidas, esquema ausente)
             // Por qué está aquí: evita que la aplicación sufra un cierre abrupto y muestra un mensaje amigable en rojo
             System.out.println(ColoresConsola.ROJO + "[ERROR] No se pudo establecer la conexión con MySQL." + ColoresConsola.RESET);
-            System.out.println("[DETALLE] Verifique que el servidor esté activo y las credenciales sean correctas.");
+            System.out.println("[DETALLE] Verifique que el servidor esté activo y las credenciales sean correctas. " + e.getMessage());
         }
     }
 }
